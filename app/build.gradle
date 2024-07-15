@@ -4,13 +4,13 @@ plugins {
 }
 
 android {
-    compileSdkVersion 30
     buildToolsVersion "30.0.3"
 
     defaultConfig {
+        compileSdk 34
         applicationId "otus.homework.customview"
         minSdkVersion 23
-        targetSdkVersion 30
+        targetSdkVersion 34
         versionCode 1
         versionName "1.0"
 
