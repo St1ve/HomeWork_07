@@ -2,7 +2,14 @@ package otus.homework.customview
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import java.text.NumberFormat
+import java.time.Instant
+import java.time.YearMonth
+import java.time.ZoneId
+import java.util.Currency
+import java.util.Locale
 import kotlinx.serialization.json.Json
+import otus.homework.customview.PieChartUiState.Slice
 
 class MainActivity: AppCompatActivity() {
 
@@ -15,6 +22,40 @@ class MainActivity: AppCompatActivity() {
                 it.readText()
             }
             val transactions = Json.decodeFromString<List<Transaction>>(payloadRaw)
+
+            val pieChartUiState = mapTransactionsToPieChartUiState(transactions)
         }
+    }
+
+    private fun mapTransactionsToPieChartUiState(
+        transactions: List<Transaction>,
+    ): List<PieChartUiState> {
+        val format = NumberFormat.getCurrencyInstance(Locale("RU"))
+        format.currency = Currency.getInstance("RUB")
+
+        return transactions
+            .groupBy { transaction ->
+                val instant = Instant
+                    .ofEpochSecond(transaction.time)
+                    .atZone(ZoneId.systemDefault())
+
+                YearMonth.from(instant)
+            }
+            .map { (yearMonth, transactions) ->
+                val totalAmount = transactions.sumOf { it.amount }.toFloat()
+                val pieChartSlices = transactions.map { transaction ->
+                    Slice(
+                        name = transaction.name,
+                        percentage = transaction.amount / totalAmount,
+                    )
+                }
+
+                PieChartUiState(
+                    title = "Expenses",
+                    date = yearMonth.toString(),
+                    totalAmount = format.format(totalAmount),
+                    slices = pieChartSlices,
+                )
+            }
     }
 }
