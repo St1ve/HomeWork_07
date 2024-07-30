@@ -17,6 +17,8 @@ class MainActivity: AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        val pieChartView = findViewById<PieChartView>(R.id.pie_chart_view)
+
         if (savedInstanceState == null) {
             val payloadRaw = resources.openRawResource(R.raw.payload).bufferedReader().use {
                 it.readText()
@@ -24,6 +26,7 @@ class MainActivity: AppCompatActivity() {
             val transactions = Json.decodeFromString<List<Transaction>>(payloadRaw)
 
             val pieChartUiState = mapTransactionsToPieChartUiState(transactions)
+            pieChartView.state = pieChartUiState.first()
         }
     }
 
@@ -46,7 +49,7 @@ class MainActivity: AppCompatActivity() {
                 val pieChartSlices = transactions.map { transaction ->
                     Slice(
                         name = transaction.name,
-                        percentage = transaction.amount / totalAmount,
+                        sweepAngle = (transaction.amount / totalAmount) * 360,
                     )
                 }
 

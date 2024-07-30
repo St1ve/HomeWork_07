@@ -9,6 +9,6 @@ data class PieChartUiState(
 
     data class Slice(
         val name: String,
-        val percentage: Float,
+        val sweepAngle: Float,
     )
 }

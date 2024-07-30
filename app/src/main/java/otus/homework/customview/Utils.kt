@@ -1,11 +1,19 @@
 package otus.homework.customview
 
-import android.graphics.Color
+import android.content.res.Resources
+import android.os.Build
+import android.util.TypedValue
 
-fun generateRandomColor(): Int {
-    val r = (Math.random() * 256).toInt()
-    val g = (Math.random() * 256).toInt()
-    val b = (Math.random() * 256).toInt()
+val Float.pxToDp: Float
+    get() = (this * Resources.getSystem().displayMetrics.density)
 
-    return Color.rgb(r, g, b)
-}
+val Float.pxToSp: Float
+    get() = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        this * TypedValue.deriveDimension(
+            TypedValue.COMPLEX_UNIT_SP,
+            this,
+            Resources.getSystem().displayMetrics
+        )
+    } else {
+        this * Resources.getSystem().displayMetrics.scaledDensity
+    }
