@@ -5,6 +5,10 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
+import android.os.Build.VERSION
+import android.os.Build.VERSION_CODES
+import android.os.Bundle
+import android.os.Parcelable
 import android.text.Layout
 import android.text.StaticLayout
 import android.text.TextPaint
@@ -91,7 +95,6 @@ class PieChartView @JvmOverloads constructor(
         val size = minOf(width, height)
         val halfStrokeWidth = slicesPaint.strokeWidth / 2
 
-        
         headerStaticLayout = StaticLayout.Builder
             .obtain(
                 state.title,
@@ -155,5 +158,30 @@ class PieChartView @JvmOverloads constructor(
         )
         dateStaticLayout.draw(canvas)
         canvas.restore()
+    }
+
+    override fun onSaveInstanceState(): Parcelable {
+        val bundle = Bundle()
+        bundle.putParcelable(KEY_SUPER_STATE, super.onSaveInstanceState())
+        bundle.putParcelable(KEY_SAVE_DATA, state)
+        return bundle
+    }
+
+    override fun onRestoreInstanceState(state: Parcelable?) {
+        if (state is Bundle) {
+            return if (VERSION.SDK_INT >= VERSION_CODES.TIRAMISU) {
+                this.state = state.getParcelable(KEY_SAVE_DATA, PieChartUiState::class.java)
+                super.onRestoreInstanceState(state.getParcelable(KEY_SUPER_STATE, Parcelable::class.java))
+            } else {
+                this.state = state.getParcelable(KEY_SAVE_DATA)
+                super.onRestoreInstanceState(state.getParcelable(KEY_SUPER_STATE))
+            }
+        }
+        super.onRestoreInstanceState(state)
+    }
+
+    companion object {
+        private const val KEY_SAVE_DATA = "KEY_PIE_CHART_VIEW_DATA"
+        private const val KEY_SUPER_STATE = "KEY_SUPER_STATE"
     }
 }
