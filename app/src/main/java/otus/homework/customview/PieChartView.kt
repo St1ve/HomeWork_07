@@ -170,8 +170,8 @@ class PieChartView @JvmOverloads constructor(
 
         canvas.save()
         canvas.translate(
-            paddingLeft + headerStaticLayout.height + slicesRect.width() / 2f - dateStaticLayout.width / 2 + slicesPaint.strokeWidth,
-            paddingTop + headerStaticLayout.height - dateStaticLayout.height / 2 + slicesRect.height() / 2
+            paddingLeft + headerStaticLayout.height + slicesRect.width() / 2f - dateStaticLayout.width / 2 + slicesPaint.strokeWidth / 2,
+            paddingTop + headerStaticLayout.height - dateStaticLayout.height / 2 + slicesRect.height() / 2 + slicesPaint.strokeWidth / 2
         )
         dateStaticLayout.draw(canvas)
         canvas.restore()
