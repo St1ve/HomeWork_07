@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="PieChartView">
+        <attr name="titleFont" format="dimension" />
+        <attr name="dateFont" format="dimension" />
+        <attr name="slicesWidth" format="dimension" />
+    </declare-styleable>
+</resources>

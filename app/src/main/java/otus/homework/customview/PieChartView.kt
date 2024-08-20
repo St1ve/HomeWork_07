@@ -15,6 +15,7 @@ import android.text.TextPaint
 import android.text.TextUtils
 import android.util.AttributeSet
 import android.view.View
+import androidx.core.content.res.getDimensionPixelSizeOrThrow
 import kotlin.random.Random
 
 class PieChartView @JvmOverloads constructor(
@@ -28,13 +29,11 @@ class PieChartView @JvmOverloads constructor(
 
     private val headerPaint = TextPaint().apply {
         color = Color.BLACK
-        style = Paint.Style.STROKE
-        textSize = 16f.pxToSp
+        style = Paint.Style.FILL_AND_STROKE
     }
     private val datePaint = TextPaint().apply {
         color = Color.BLACK
-        style = Paint.Style.STROKE
-        textSize = 16f.pxToSp
+        style = Paint.Style.FILL_AND_STROKE
     }
     private lateinit var headerStaticLayout: StaticLayout
     private lateinit var dateStaticLayout: StaticLayout
@@ -59,6 +58,24 @@ class PieChartView @JvmOverloads constructor(
     )
 
     init {
+        context.theme.obtainStyledAttributes(
+            /* set = */ attrs,
+            /* attrs = */ R.styleable.PieChartView,
+            /* defStyleAttr = */ 0,
+            /* defStyleRes = */ 0
+        ).apply {
+            try {
+                headerPaint.textSize =
+                    getDimensionPixelSize(R.styleable.PieChartView_titleFont, 16).toFloat()
+                datePaint.textSize =
+                    getDimensionPixelSize(R.styleable.PieChartView_dateFont, 16).toFloat()
+                slicesPaint.strokeWidth =
+                    getDimensionPixelSize(R.styleable.PieChartView_slicesWidth, 8).toFloat()
+            } finally {
+                recycle()
+            }
+        }
+
         if (isInEditMode) {
             state = PieChartUiState(
                 title = "Expanses",
@@ -153,7 +170,7 @@ class PieChartView @JvmOverloads constructor(
 
         canvas.save()
         canvas.translate(
-            paddingLeft + headerStaticLayout.height + slicesRect.width() / 2f  - dateStaticLayout.width / 2 + slicesPaint.strokeWidth,
+            paddingLeft + headerStaticLayout.height + slicesRect.width() / 2f - dateStaticLayout.width / 2 + slicesPaint.strokeWidth,
             paddingTop + headerStaticLayout.height - dateStaticLayout.height / 2 + slicesRect.height() / 2
         )
         dateStaticLayout.draw(canvas)
@@ -171,7 +188,12 @@ class PieChartView @JvmOverloads constructor(
         if (state is Bundle) {
             return if (VERSION.SDK_INT >= VERSION_CODES.TIRAMISU) {
                 this.state = state.getParcelable(KEY_SAVE_DATA, PieChartUiState::class.java)
-                super.onRestoreInstanceState(state.getParcelable(KEY_SUPER_STATE, Parcelable::class.java))
+                super.onRestoreInstanceState(
+                    state.getParcelable(
+                        KEY_SUPER_STATE,
+                        Parcelable::class.java
+                    )
+                )
             } else {
                 this.state = state.getParcelable(KEY_SAVE_DATA)
                 super.onRestoreInstanceState(state.getParcelable(KEY_SUPER_STATE))
@@ -181,6 +203,7 @@ class PieChartView @JvmOverloads constructor(
     }
 
     companion object {
+
         private const val KEY_SAVE_DATA = "KEY_PIE_CHART_VIEW_DATA"
         private const val KEY_SUPER_STATE = "KEY_SUPER_STATE"
     }
