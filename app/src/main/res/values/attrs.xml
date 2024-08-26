@@ -4,5 +4,6 @@
         <attr name="titleFont" format="dimension" />
         <attr name="dateFont" format="dimension" />
         <attr name="slicesWidth" format="dimension" />
+        <attr name="selectedSliceTextFont" format="dimension" />
     </declare-styleable>
 </resources>

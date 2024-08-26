@@ -14,9 +14,11 @@ import android.text.StaticLayout
 import android.text.TextPaint
 import android.text.TextUtils
 import android.util.AttributeSet
+import android.view.GestureDetector
+import android.view.GestureDetector.SimpleOnGestureListener
+import android.view.MotionEvent
 import android.view.View
-import androidx.core.content.res.getDimensionPixelSizeOrThrow
-import kotlin.random.Random
+import kotlin.math.atan2
 
 class PieChartView @JvmOverloads constructor(
     context: Context,
@@ -26,6 +28,11 @@ class PieChartView @JvmOverloads constructor(
 ): View(context, attrs, defStyleAttr, defStyleRes) {
 
     var state: PieChartUiState? = null
+        set(value) {
+            clickedSliceIndexed = null
+            field = value
+        }
+    private var clickedSliceIndexed: Int? = null
 
     private val headerPaint = TextPaint().apply {
         color = Color.BLACK
@@ -37,6 +44,7 @@ class PieChartView @JvmOverloads constructor(
     }
     private lateinit var headerStaticLayout: StaticLayout
     private lateinit var dateStaticLayout: StaticLayout
+    private lateinit var clickedSliceStaticLayout: StaticLayout
 
     private val slicesRect = RectF()
     private val slicesPaint = Paint().apply {
@@ -44,18 +52,17 @@ class PieChartView @JvmOverloads constructor(
         style = Paint.Style.STROKE
         strokeWidth = 8f.pxToDp
     }
-    private val slicesColors = listOf(
-        Color.rgb(255, 191, 191),
-        Color.rgb(251, 224, 174),
-        Color.rgb(188, 251, 174),
-        Color.rgb(187, 192, 255),
-        Color.rgb(168, 230, 207),
-        Color.rgb(220, 237, 193),
-        Color.rgb(220, 237, 193),
-        Color.rgb(255, 211, 182),
-        Color.rgb(255, 170, 165),
-        Color.rgb(255, 139, 148),
-    )
+    private val selectedSlicePaint = Paint().apply {
+        color = Color.BLACK
+        style = Paint.Style.STROKE
+        strokeWidth = 8f.pxToDp
+    }
+
+    private val selectedSliceTextPaint = TextPaint().apply {
+        color = Color.BLACK
+        style = Paint.Style.FILL_AND_STROKE
+        isAntiAlias = true
+    }
 
     init {
         context.theme.obtainStyledAttributes(
@@ -71,6 +78,12 @@ class PieChartView @JvmOverloads constructor(
                     getDimensionPixelSize(R.styleable.PieChartView_dateFont, 16).toFloat()
                 slicesPaint.strokeWidth =
                     getDimensionPixelSize(R.styleable.PieChartView_slicesWidth, 8).toFloat()
+                selectedSlicePaint.strokeWidth = slicesPaint.strokeWidth * 1.25f
+                selectedSliceTextPaint.textSize =
+                    getDimensionPixelSize(
+                        R.styleable.PieChartView_selectedSliceTextFont,
+                        8
+                    ).toFloat()
             } finally {
                 recycle()
             }
@@ -84,19 +97,27 @@ class PieChartView @JvmOverloads constructor(
                 slices = listOf(
                     PieChartUiState.Slice(
                         name = "Expense 1",
+                        startAngle = -90f,
                         sweepAngle = 0.3f * 360,
+                        color = Color.rgb(255, 191, 191),
                     ),
                     PieChartUiState.Slice(
                         name = "Expense 2",
+                        startAngle = -90f + 0.3f * 360,
                         sweepAngle = 0.25f * 360,
+                        color = Color.rgb(251, 224, 174),
                     ),
                     PieChartUiState.Slice(
                         name = "Expense 3",
+                        startAngle = -90f + 0.25f * 360 + 0.3f * 360,
                         sweepAngle = 0.25f * 360,
+                        color = Color.rgb(188, 251, 174),
                     ),
                     PieChartUiState.Slice(
                         name = "Expense 4",
+                        startAngle = -90f + 0.25f * 360f + 0.3f * 360f + 0.25f * 360f,
                         sweepAngle = 0.2f * 360,
+                        Color.rgb(187, 192, 255),
                     ),
                 )
             )
@@ -161,11 +182,22 @@ class PieChartView @JvmOverloads constructor(
         headerStaticLayout.draw(canvas)
         canvas.restore()
 
-        var startAngle = -90f
-        state.slices.forEachIndexed { index, slice: PieChartUiState.Slice ->
-            slicesPaint.color = slicesColors.getOrElse(index) { slicesColors[Random.nextInt(0, 9)] }
-            canvas.drawArc(slicesRect, startAngle, slice.sweepAngle, false, slicesPaint)
-            startAngle += slice.sweepAngle
+        state.slices.forEachIndexed { index, slice ->
+            if (index == clickedSliceIndexed) {
+                selectedSlicePaint.color = slice.color
+                canvas.drawArc(slicesRect, slice.startAngle, slice.sweepAngle, false, selectedSlicePaint)
+
+                canvas.save()
+                canvas.translate(
+                    paddingLeft + headerStaticLayout.height + slicesRect.width() / 2f - clickedSliceStaticLayout.width / 2 + slicesPaint.strokeWidth / 2,
+                    paddingTop + headerStaticLayout.height - dateStaticLayout.height / 2 + slicesRect.height() / 2 + slicesPaint.strokeWidth / 2 + dateStaticLayout.height
+                )
+                clickedSliceStaticLayout.draw(canvas)
+                canvas.restore()
+            } else {
+                slicesPaint.color = slice.color
+                canvas.drawArc(slicesRect, slice.startAngle, slice.sweepAngle, false, slicesPaint)
+            }
         }
 
         canvas.save()
@@ -177,17 +209,72 @@ class PieChartView @JvmOverloads constructor(
         canvas.restore()
     }
 
+    private val sliceGestureDetector = GestureDetector(context, object: SimpleOnGestureListener() {
+        override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
+            val state = state
+                ?: throw IllegalStateException("State can't be null. Need to set state before measuring")
+
+            val angle = Math
+                .toDegrees(atan2(e.y - slicesRect.centerY(), e.x - slicesRect.centerX()).toDouble())
+                .toFloat()
+            val clickedDegrees = if (angle <= -90) {
+                angle + 360f
+            } else {
+                angle
+            }
+
+            val clickedIndex = state.slices.indexOfFirst { slice ->
+                slice.startAngle <= clickedDegrees && (slice.startAngle + slice.sweepAngle) > clickedDegrees
+            }
+            if (clickedIndex != clickedSliceIndexed) {
+                val clickedSliceName = state.slices[clickedIndex].name
+                clickedSliceStaticLayout = StaticLayout.Builder
+                    .obtain(
+                        clickedSliceName,
+                        0,
+                        clickedSliceName.length,
+                        selectedSliceTextPaint,
+                        dateStaticLayout.width
+                    )
+                    .setAlignment(Layout.Alignment.ALIGN_CENTER)
+                    .setLineSpacing(0f, 1f)
+                    .setIncludePad(true)
+                    .setEllipsize(TextUtils.TruncateAt.MIDDLE)
+                    .setMaxLines(1)
+                    .build()
+
+                clickedSliceIndexed = clickedIndex
+                invalidate()
+            }
+
+            return true
+        }
+
+        override fun onDown(e: MotionEvent): Boolean {
+            return true
+        }
+    })
+
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        return sliceGestureDetector.onTouchEvent(event)
+    }
+
     override fun onSaveInstanceState(): Parcelable {
         val bundle = Bundle()
         bundle.putParcelable(KEY_SUPER_STATE, super.onSaveInstanceState())
-        bundle.putParcelable(KEY_SAVE_DATA, state)
+        bundle.putParcelable(KEY_SAVE_STATE, state)
+        clickedSliceIndexed?.let { bundle.putInt(KEY_SAVE_CLICKED_INDEX, it) }
         return bundle
     }
 
     override fun onRestoreInstanceState(state: Parcelable?) {
         if (state is Bundle) {
             return if (VERSION.SDK_INT >= VERSION_CODES.TIRAMISU) {
-                this.state = state.getParcelable(KEY_SAVE_DATA, PieChartUiState::class.java)
+                this.state = state.getParcelable(KEY_SAVE_STATE, PieChartUiState::class.java)
+                val clickedIndex = state.getInt(KEY_SAVE_CLICKED_INDEX, Int.MIN_VALUE)
+                if (clickedIndex != Int.MIN_VALUE) {
+                    clickedSliceIndexed = clickedIndex
+                }
                 super.onRestoreInstanceState(
                     state.getParcelable(
                         KEY_SUPER_STATE,
@@ -195,7 +282,7 @@ class PieChartView @JvmOverloads constructor(
                     )
                 )
             } else {
-                this.state = state.getParcelable(KEY_SAVE_DATA)
+                this.state = state.getParcelable(KEY_SAVE_STATE)
                 super.onRestoreInstanceState(state.getParcelable(KEY_SUPER_STATE))
             }
         }
@@ -204,7 +291,8 @@ class PieChartView @JvmOverloads constructor(
 
     companion object {
 
-        private const val KEY_SAVE_DATA = "KEY_PIE_CHART_VIEW_DATA"
+        private const val KEY_SAVE_CLICKED_INDEX = "KEY_PIE_CHART_VIEW_CLICKED_INDEX"
+        private const val KEY_SAVE_STATE = "KEY_PIE_CHART_VIEW_STATE_DATA"
         private const val KEY_SUPER_STATE = "KEY_SUPER_STATE"
     }
 }
