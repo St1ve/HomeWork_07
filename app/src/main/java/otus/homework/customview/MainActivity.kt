@@ -9,6 +9,7 @@ import java.time.YearMonth
 import java.time.ZoneId
 import java.util.Currency
 import java.util.Locale
+import kotlin.collections.Map.Entry
 import kotlin.random.Random
 import kotlinx.serialization.json.Json
 import otus.homework.customview.PieChartUiState.Slice
@@ -62,15 +63,22 @@ class MainActivity: AppCompatActivity() {
             .map { (yearMonth, transactions) ->
                 val totalAmount = transactions.sumOf { it.amount }.toFloat()
                 var startAngle = -90f
-                val pieChartSlices = transactions.mapIndexed { i, transaction ->
-                    val sweepAngle = (transaction.amount / totalAmount) * 360
-                    Slice(
-                        name = transaction.name,
-                        startAngle = startAngle,
-                        sweepAngle = sweepAngle,
-                        color = slicesColors.getOrElse(i) { slicesColors[i % 9] }
-                    ).also { startAngle += sweepAngle }
-                }
+                var index = 0
+
+                val pieChartSlices = transactions
+                    .groupBy { transaction -> transaction.category }
+                    .map { (category, categoryTransactions) ->
+                        val sweepAngle = (categoryTransactions.sumOf { it.amount } / totalAmount) * 360
+                        Slice(
+                            name = category,
+                            startAngle = startAngle,
+                            sweepAngle = sweepAngle,
+                            color = slicesColors.getOrElse(index) { slicesColors[index % 9] }
+                        ).also {
+                            index++
+                            startAngle += sweepAngle
+                        }
+                    }
 
                 PieChartUiState(
                     title = "Expenses",
