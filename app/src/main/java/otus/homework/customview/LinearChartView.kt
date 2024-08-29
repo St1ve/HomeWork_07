@@ -8,6 +8,10 @@ import android.graphics.DashPathEffect
 import android.graphics.Paint
 import android.graphics.Paint.Align.CENTER
 import android.graphics.Path
+import android.os.Build.VERSION
+import android.os.Build.VERSION_CODES
+import android.os.Bundle
+import android.os.Parcelable
 import android.text.TextPaint
 import android.util.AttributeSet
 import android.view.View
@@ -207,4 +211,36 @@ class LinearChartView @JvmOverloads constructor(
             canvas.drawPath(path, linePaint)
         }
     }
+
+    override fun onSaveInstanceState(): Parcelable {
+        val bundle = Bundle()
+        bundle.putParcelable(KEY_SUPER_STATE, super.onSaveInstanceState())
+        bundle.putParcelable(KEY_SAVE_STATE, state)
+        return bundle
+    }
+
+    override fun onRestoreInstanceState(state: Parcelable?) {
+        if (state is Bundle) {
+            return if (VERSION.SDK_INT >= VERSION_CODES.TIRAMISU) {
+                this.state = state.getParcelable(KEY_SAVE_STATE, LinearChartUiState::class.java)
+                super.onRestoreInstanceState(
+                    state.getParcelable(
+                        KEY_SUPER_STATE,
+                        Parcelable::class.java
+                    )
+                )
+            } else {
+                this.state = state.getParcelable(KEY_SAVE_STATE)
+                super.onRestoreInstanceState(state.getParcelable(KEY_SUPER_STATE))
+            }
+        }
+        super.onRestoreInstanceState(state)
+    }
+
+    companion object {
+
+        private const val KEY_SAVE_STATE = "KEY_LINEAR_CHART_VIEW_STATE_DATA"
+        private const val KEY_SUPER_STATE = "KEY_SUPER_STATE"
+    }
+
 }
