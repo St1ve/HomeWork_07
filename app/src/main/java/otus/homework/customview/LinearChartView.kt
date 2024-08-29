@@ -6,6 +6,7 @@ import android.graphics.Color
 import android.graphics.CornerPathEffect
 import android.graphics.DashPathEffect
 import android.graphics.Paint
+import android.graphics.Paint.Align.CENTER
 import android.graphics.Path
 import android.text.TextPaint
 import android.util.AttributeSet
@@ -44,11 +45,13 @@ class LinearChartView @JvmOverloads constructor(
         strokeWidth = 5f
     }
     private val textPaint = TextPaint().apply {
+        isAntiAlias = true
+        textAlign = CENTER
         color = Color.BLACK
-        style = Paint.Style.STROKE
-        strokeWidth = 8f
+        style = Paint.Style.FILL_AND_STROKE
+        textSize = 12f.spToPx
     }
-    //    private val textHeight = ceil(-textPaint.ascent() + textPaint.descent()).toInt()
+    private val textHeight = ceil(-textPaint.ascent() + textPaint.descent()).toInt()
 
     private val format = NumberFormat.getCurrencyInstance(Locale("RU")).apply {
         currency = Currency.getInstance("RUB")
@@ -112,27 +115,26 @@ class LinearChartView @JvmOverloads constructor(
         var heightSize = MeasureSpec.getSize(heightMeasureSpec)
 
         widthSize = when (widthMode) {
-            MeasureSpec.UNSPECIFIED -> 200.pxToDp
-            else -> max(200.pxToDp, widthSize)
+            MeasureSpec.UNSPECIFIED -> 200.dpToPx
+            else -> max(200.dpToPx, widthSize)
         }
 
         heightSize = when (heightMode) {
-            MeasureSpec.UNSPECIFIED -> 200.pxToDp
-            else -> max(200.pxToDp, heightSize)
+            MeasureSpec.UNSPECIFIED -> 200.dpToPx
+            else -> max(200.dpToPx, heightSize)
         }
 
-        // FIXME: Add height and width of text
         val halfStrokeWidth = gridPaint.strokeWidth / 2
 
         startX = paddingLeft.toFloat()
-        startY = heightSize.toFloat() - paddingTop
+        startY = heightSize.toFloat() - paddingTop - textHeight
 
         val abscissaWidth = widthSize.toFloat() - paddingLeft - paddingRight - halfStrokeWidth
         abscissaStep = abscissaWidth / state.column.totalSteps
 
         val ordinateHeight =
-            heightSize.toFloat() - paddingBottom - paddingTop - halfStrokeWidth
-        ordinateStep = ordinateHeight / ceil(state.row.maxValue / state.row.step)
+            heightSize.toFloat() - paddingBottom - paddingTop - halfStrokeWidth - textHeight
+        ordinateStep = ordinateHeight / state.row.totalSteps
 
         val dayStep = abscissaWidth / state.column.maxValue
         val moneyStep = ordinateHeight / state.row.maxValue
@@ -158,26 +160,45 @@ class LinearChartView @JvmOverloads constructor(
 
         var currentStep = 0
         while (state.column.step * currentStep <= state.column.maxValue) {
+            val x = startX + abscissaStep * currentStep
             canvas.drawLine(
-                startX + abscissaStep * currentStep,
+                x,
                 startY,
-                startX + abscissaStep * currentStep,
+                x,
                 startY - ordinateStep * state.row.totalSteps,
                 gridPaint
             )
+
+            canvas.drawText(
+                ((state.column.step * currentStep).toInt()).toString(),
+                x,
+                startY + textHeight + gridPaint.strokeWidth / 2,
+                textPaint
+            )
+
             currentStep++
         }
 
         currentStep = 0
+        val endX = startX + abscissaStep * state.column.totalSteps
         while (state.row.step * currentStep <= state.row.maxValue) {
             val y = startY - ordinateStep * currentStep
             canvas.drawLine(
                 startX,
                 y,
-                startX + abscissaStep * state.column.totalSteps,
+                endX,
                 y,
                 gridPaint
             )
+
+            val text = format.format(state.row.step * currentStep)
+            canvas.drawText(
+                text,
+                endX - textPaint.measureText(text) / 2,
+                y - textHeight,
+                textPaint
+            )
+
             currentStep++
         }
 

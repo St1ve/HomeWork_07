@@ -50,12 +50,12 @@ class PieChartView @JvmOverloads constructor(
     private val slicesPaint = Paint().apply {
         color = Color.BLACK
         style = Paint.Style.STROKE
-        strokeWidth = 8f.pxToDp
+        strokeWidth = 8f.dpToPx
     }
     private val selectedSlicePaint = Paint().apply {
         color = Color.BLACK
         style = Paint.Style.STROKE
-        strokeWidth = 8f.pxToDp
+        strokeWidth = 8f.dpToPx
     }
 
     private val selectedSliceTextPaint = TextPaint().apply {
